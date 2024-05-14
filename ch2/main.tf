@@ -2,23 +2,66 @@ provider "aws" {
     region = "ap-northeast-1"
 }
 
-resource "aws_instance" "example" {
-    ami = "ami-07c589821f2b353aa"
+# resource "aws_instance" "example" {
+#     ami = "ami-07c589821f2b353aa"
+#     instance_type = "t2.micro"
+#     subnet_id = aws_subnet.main.id
+#     vpc_security_group_ids = [aws_security_group.instance.id]
+#     user_data = <<-EOF
+#     #!/bin/bash
+#     echo "Hello, World!!!!!!!!" > index.html
+#     nohup busybox httpd -f -p ${var.server_port} & 
+#     EOF
+
+#     user_data_replace_on_change = true
+
+#     tags={
+#         Name = "uekusa-terraform-example"
+#     }
+# }
+resource "aws_launch_configuration" "example" {
+    image_id = "ami-07c589821f2b353aa"
     instance_type = "t2.micro"
-    subnet_id = aws_subnet.main.id
-    vpc_security_group_ids = [aws_security_group.instance.id]
+    security_groups = [aws_security_group.instance.id]
     user_data = <<-EOF
     #!/bin/bash
     echo "Hello, World!!!!!!!!" > index.html
     nohup busybox httpd -f -p ${var.server_port} & 
     EOF
 
-    user_data_replace_on_change = true
-
-    tags={
-        Name = "uekusa-terraform-example"
+    # Autoscaling Groupがある起動設定を使用する場合に必要
+    lifecycle {
+        create_before_destroy = true
     }
 }
+
+data "aws_vpc" "main" {
+    filter{
+        name = "tag:Name"
+        values = ["uekusa-example-vpc"]
+    }
+}
+data "aws_subnets" "main" {
+    filter {
+        name = "vpc-id"
+        values = [data.aws_vpc.main.id]
+    }
+}
+
+resource "aws_autoscaling_group" "example" {
+    launch_configuration = aws_launch_configuration.example.name
+    vpc_zone_identifier = data.aws_subnets.main.ids
+
+    min_size = 2
+    max_size = 10
+
+    tag{
+        key = "Name"
+        value = "uekusa-terraform-asg-example"
+        propagate_at_launch = true
+    }
+}
+
 
 resource "aws_security_group" "instance" {
     name = "uekusa-example-instance"
@@ -37,10 +80,10 @@ variable "server_port"{
     default = 8080
 }
 
-output "public_ip"{
-    value = aws_instance.example.public_ip
-    description = "The public IP address of the web server"
-}
+# output "public_ip"{
+#     value = aws_instance.example.public_ip
+#     description = "The public IP address of the web server"
+# }
 
 resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"
