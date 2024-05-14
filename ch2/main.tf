@@ -19,16 +19,16 @@ provider "aws" {
 #         Name = "uekusa-terraform-example"
 #     }
 # }
-resource "aws_launch_configuration" "example" {
+resource "aws_launch_template" "example" {
     image_id = "ami-07c589821f2b353aa"
     instance_type = "t2.micro"
-    security_groups = [aws_security_group.instance.id]
-    user_data = <<-EOF
+    vpc_security_group_ids = [aws_security_group.instance.id]
+    user_data = base64encode(<<-EOF
     #!/bin/bash
     echo "Hello, World!!!!!!!!" > index.html
     nohup busybox httpd -f -p ${var.server_port} & 
     EOF
-
+    )
     # Autoscaling Groupがある起動設定を使用する場合に必要
     lifecycle {
         create_before_destroy = true
@@ -49,7 +49,10 @@ data "aws_subnets" "main" {
 }
 
 resource "aws_autoscaling_group" "example" {
-    launch_configuration = aws_launch_configuration.example.name
+    launch_template {
+        id = aws_launch_template.example.id
+        version = "$Latest"
+    }
     vpc_zone_identifier = data.aws_subnets.main.ids
 
     min_size = 2
