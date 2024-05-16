@@ -50,3 +50,13 @@ resource "aws_dynamodb_table" "terraform_locks" {
         type = "S"
     }
 }
+
+terraform {
+  backend "s3" {
+    bucket = "uekusa-terraform-up-and-running-state"
+    key = "global/s3/terraform.tfstate"
+    region = "ap-northeast-1"
+    dynamodb_table = "uekusa-terraform-up-and-running-locks"
+    encrypt = true
+  }
+}
