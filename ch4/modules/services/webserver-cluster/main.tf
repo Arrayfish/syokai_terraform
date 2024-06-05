@@ -83,7 +83,7 @@ data "terraform_remote_state" "db" {
 
 resource "aws_launch_template" "example" {
   image_id               = "ami-07c589821f2b353aa"
-  instance_type          = "t2.micro"
+  instance_type          = var.instance_type
   vpc_security_group_ids = [aws_security_group.instance.id]
   user_data = base64encode(
     templatefile("user-data.sh", {
@@ -120,12 +120,12 @@ resource "aws_autoscaling_group" "example" {
     version = "$Latest"
   }
   vpc_zone_identifier = data.aws_subnets.main.ids
-
+  
   target_group_arns = [aws_lb_target_group.asg.arn]
   health_check_type = "ELB"
 
-  min_size = 2
-  max_size = 10
+  min_size = var.min_size
+  max_size = var.max_size
 
   tag {
     key                 = "Name"
