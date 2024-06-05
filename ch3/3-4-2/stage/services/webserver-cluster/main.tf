@@ -4,7 +4,12 @@ provider "aws" {
 
 terraform {
   backend "s3" {
+    bucket = "uekusa-terraform-up-and-running-state"
     key = "stage/services/webserver-cluster/terraform.tfstate"
+    region = "ap-northeast-1"
+
+    dynamodb_table = "uekusa-terraform-up-and-running-locks"
+    encrypt = true
   }
 }
 
@@ -34,7 +39,7 @@ resource "aws_lb_target_group" "asg"{
     name = "uekusa-asg-example"
     port = var.server_port
     protocol = "HTTP"
-    vpc_id = data.aws_vpc.main.id
+    vpc_id = data.terraform_remote_state.vpc.outputs.vpc_id
 
     health_check {
         path = "/"
@@ -64,7 +69,7 @@ resource "aws_lb_listener_rule" "asg" {
 
 resource "aws_security_group" "alb" {
     name = "uekusa-example-alb"
-    vpc_id = aws_vpc.main.id
+    vpc_id = data.terraform_remote_state.vpc.outputs.vpc_id
     # allow inbound http requests
     ingress {
         from_port = 80
@@ -82,16 +87,25 @@ resource "aws_security_group" "alb" {
     }
 }
 
+data "terraform_remote_state" "db" {
+    backend = "s3"
+    config = {
+        bucket = "uekusa-terraform-up-and-running-state"
+        key = "stage/data-stores/mysql/terraform.tfstate"
+        region = "ap-northeast-1"
+    }
+}
 
 resource "aws_launch_template" "example" {
   image_id               = "ami-07c589821f2b353aa"
   instance_type          = "t2.micro"
   vpc_security_group_ids = [aws_security_group.instance.id]
-  user_data = base64encode(<<-EOF
-    #!/bin/bash
-    echo "Hello, World!!!!!!!!" > index.html
-    nohup busybox httpd -f -p ${var.server_port} & 
-    EOF
+  user_data = base64encode(
+    templatefile("user-data.sh", {
+      server_port = var.server_port
+      db_address = data.terraform_remote_state.db.outputs.address
+      db_port = data.terraform_remote_state.db.outputs.port
+    })
   )
   # Autoscaling Groupがある起動設定を使用する場合に必要
   lifecycle {
@@ -99,16 +113,19 @@ resource "aws_launch_template" "example" {
   }
 }
 
-data "aws_vpc" "main" {
-  filter {
-    name   = "tag:Name"
-    values = ["uekusa-example-vpc"]
-  }
+data "terraform_remote_state" "vpc" {
+    backend = "s3"
+    config = {
+        bucket = "uekusa-terraform-up-and-running-state"
+        key = "stage/vpc/terraform.tfstate"
+        region = "ap-northeast-1"
+    }
 }
+
 data "aws_subnets" "main" {
   filter {
     name   = "vpc-id"
-    values = [data.aws_vpc.main.id]
+    values = [data.terraform_remote_state.vpc.outputs.vpc_id]
   }
 }
 
@@ -135,36 +152,11 @@ resource "aws_autoscaling_group" "example" {
 
 resource "aws_security_group" "instance" {
   name   = "uekusa-example-instance"
-  vpc_id = aws_vpc.main.id
+  vpc_id = data.terraform_remote_state.vpc.outputs.vpc_id
   ingress {
     from_port   = var.server_port
     to_port     = var.server_port
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-resource "aws_vpc" "main" {
-  cidr_block = "10.0.0.0/16"
-  tags = {
-    Name = "uekusa-example-vpc"
-  }
-}
-
-resource "aws_subnet" "main" {
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = "10.0.1.0/24"
-  availability_zone       = "ap-northeast-1a"
-  tags = {
-    Name = "uekusa-example-subnet"
-  }
-}
-
-resource "aws_subnet" "sub" {
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = "10.0.2.0/24"
-  availability_zone       = "ap-northeast-1c"
-  tags = {
-    Name = "uekusa-example-subnet2"
   }
 }

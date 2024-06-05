@@ -36,3 +36,30 @@ resource "aws_subnet" "db_subnet2" {
         Name = "uekusa-example-subnet2"
     }
 }
+
+# webサーバのためのインターネットゲートウェイを作成
+resource "aws_internet_gateway" "example" {
+    vpc_id = aws_vpc.example.id
+    tags = {
+        Name = "uekusa-example-igw"
+    }
+}
+
+# ルートテーブルを作成
+resource "aws_route_table" "example"{
+    vpc_id = aws_vpc.example.id
+    route {
+        cidr_block = "0.0.0.0/0"
+        gateway_id = aws_internet_gateway.example.id
+    }
+}
+
+## ルートテーブルとサブネットを関連付け
+resource "aws_route_table_association" "a" {
+    subnet_id = aws_subnet.db_subnet1.id
+    route_table_id = aws_route_table.example.id
+}
+resource "aws_route_table_association" "b" {
+    subnet_id = aws_subnet.db_subnet2.id
+    route_table_id = aws_route_table.example.id
+}

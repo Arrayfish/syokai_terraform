@@ -13,10 +13,25 @@ terraform {
     }
 }
 
-# TODO: VPCからサブネットの情報を持ってくる
+data "terraform_remote_state" "vpc" {
+    backend = "s3"
+    config = {
+        bucket = "uekusa-terraform-up-and-running-state"
+        key = "stage/vpc/terraform.tfstate"
+        region = "ap-northeast-1"
+    }
+}
+
+data "aws_subnets" "example" {
+    filter {
+        name = "vpc-id"
+        values = [data.terraform_remote_state.vpc.outputs.vpc_id]
+    }
+}
+
 resource "aws_db_subnet_group" "example" {
     name = "uekusa-example"
-    subnet_ids = [aws_subnet.example.id] # ここにvpcで設定したサブネットを記述
+    subnet_ids = data.aws_subnets.example.ids
     tags = {
         Name = "uekusa-example"
     }
@@ -26,10 +41,10 @@ resource "aws_db_instance" "example" {
     identifier = "uekusa-terraform-up-and-running"
     engine = "mysql"
     allocated_storage = 10
-    instance_class = "db.t2.micro"
+    instance_class = "db.t3.micro"
     skip_final_snapshot = true
     db_name = "example_database"
-    multi_az = false
+    db_subnet_group_name = aws_db_subnet_group.example.name
     username = var.db_username
     password = var.db_password
 }
