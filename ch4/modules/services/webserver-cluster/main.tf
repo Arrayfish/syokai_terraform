@@ -7,7 +7,7 @@ locals {
 }
 
 resource "aws_lb" "example" {
-  name               = "uekusa-${var.cluster_name}-lb-example"
+  name               = "uekusa-${var.cluster_name}-lb"
   load_balancer_type = "application"
   subnets = tolist(data.aws_subnets.main.ids)
   security_groups = [aws_security_group.alb.id]
@@ -74,8 +74,8 @@ resource "aws_security_group_rule" "allow_http_inbound" {
   protocol = local.tcp_protocol
   cidr_blocks = local.all_ips
 }
-resource "aws_security_group_rule" "allow_http_inbound" {
-  type = "engress"
+resource "aws_security_group_rule" "allow_http_outbound" {
+  type = "egress"
   security_group_id = aws_security_group.alb.id
 
   from_port = local.any_port
@@ -113,8 +113,8 @@ resource "aws_launch_template" "example" {
 data "terraform_remote_state" "vpc" {
     backend = "s3"
     config = {
-        bucket = var.db_remote_state_bucket
-        key = var.db_remote_state_key
+        bucket = var.vpc_remote_state_bucket
+        key = var.vpc_remote_state_key
         region = "ap-northeast-1"
     }
 }
