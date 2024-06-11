@@ -1,9 +1,9 @@
-output "first_arn" {
-    value = aws_iam_user.example[0].arn
-    description = "value of the first ARN"
+output "all_users"{
+    value = aws_iam_user.example
+    description = "All ARNs of the created IAM users"
 }
 
 output "all_arns"{
-    value = aws_iam_user.example[*].arn
+    value = values(aws_iam_user.example)[*].arn
     description = "All ARNs of the created IAM users"
 }
