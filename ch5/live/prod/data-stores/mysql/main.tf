@@ -14,7 +14,7 @@ terraform {
 }
 
 module "mysql" {
-    source = "github.com/brikis98/terraform-up-and-running-code//code/terraform/04-terraform-module/module-example/modules/services/webserver-cluster?ref=v0.0.2"
+    source = "../../../../modules/data-stores/mysql"
 
     vpc_remote_state_bucket = "uekusa-terraform-up-and-running-state"
     vpc_remote_state_key = "prod/vpc/terraform.tfstate"

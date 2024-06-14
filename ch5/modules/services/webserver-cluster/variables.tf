@@ -43,3 +43,9 @@ variable "max_size" {
   description = "The maximum number of instances in the autoscaling group"
   type = number
 }
+
+variable "custom_tags" {
+  description = "Custom tags to set on the Instances in the ASG"
+  type = map(string)
+  default = {}
+}

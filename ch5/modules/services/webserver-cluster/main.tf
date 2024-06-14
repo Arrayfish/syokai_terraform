@@ -74,6 +74,7 @@ resource "aws_security_group_rule" "allow_http_inbound" {
   protocol = local.tcp_protocol
   cidr_blocks = local.all_ips
 }
+
 resource "aws_security_group_rule" "allow_http_outbound" {
   type = "egress"
   security_group_id = aws_security_group.alb.id
@@ -143,6 +144,16 @@ resource "aws_autoscaling_group" "example" {
     key                 = "Name"
     value               = "uekusa-${var.cluster_name}-asg-example"
     propagate_at_launch = true
+  }
+
+  dynamic "tag" {
+    for_each = var.custom_tags
+
+    content {
+      key = tag.key
+      value = tag.value
+      propagate_at_launch = true
+    }
   }
 }
 

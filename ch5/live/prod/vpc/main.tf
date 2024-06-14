@@ -14,7 +14,7 @@ terraform {
 }
 
 module "vpc" {
-    source = "../../modules/vpc"
+    source = "../../../modules/vpc"
 
     env_name = "prod"
 
