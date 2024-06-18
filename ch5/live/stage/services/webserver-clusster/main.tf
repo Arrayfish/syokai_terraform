@@ -17,7 +17,7 @@ module "webserver_cluster" {
     source = "../../../../modules/services/webserver-cluster"
 
     ami = "ami-07c589821f2b353aa"
-    server_text = "New server text!"
+    server_text = "Hello, world!"
 
     cluster_name = "webservers-stage"
     db_remote_state_bucket = "uekusa-terraform-up-and-running-state"

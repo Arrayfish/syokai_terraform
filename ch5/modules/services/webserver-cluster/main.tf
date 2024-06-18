@@ -129,6 +129,11 @@ data "aws_subnets" "main" {
 }
 
 resource "aws_autoscaling_group" "example" {
+
+  # 起動テンプレートの名前に明示的に依存させることで、
+  # 起動設定が置き換えられたときにASGも更新される
+  #  
+  name = "${var.cluster_name}-${aws_launch_template.example.latest_version}"
   launch_template {
     id      = aws_launch_template.example.id
     version = "$Latest"
@@ -141,6 +146,15 @@ resource "aws_autoscaling_group" "example" {
   min_size = var.min_size
   max_size = var.max_size
 
+  # ASGデプロイが完了すると判断する前に、最低でもこの数の
+  # インスタンスがヘルスチェックをパスするのを待つ
+  min_elb_capacity = var.min_size
+
+  # このASGを置き換えるとき、置き換え先を先に作成してから古いものを削除する
+  lifecycle {
+    create_before_destroy = true
+  }
+
   tag {
     key                 = "Name"
     value               = "uekusa-${var.cluster_name}-asg-example"
@@ -148,7 +162,11 @@ resource "aws_autoscaling_group" "example" {
   }
 
   dynamic "tag" {
-    for_each = var.custom_tags
+    for_each = {
+      for key, value in var.custom_tags:
+      key => upper(value)
+      if key != "Name"
+    }
 
     content {
       key = tag.key
