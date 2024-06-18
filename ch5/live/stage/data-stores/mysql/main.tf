@@ -14,7 +14,7 @@ terraform {
 }
 
 module "mysql" {
-    source = "../../../modules/data-stores/mysql"
+    source = "../../../../modules/data-stores/mysql"
 
     vpc_remote_state_bucket = "uekusa-terraform-up-and-running-state"
     vpc_remote_state_key = "stage/vpc/terraform.tfstate"

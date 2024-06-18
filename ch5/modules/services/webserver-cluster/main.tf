@@ -95,7 +95,7 @@ data "terraform_remote_state" "db" {
 }
 
 resource "aws_launch_template" "example" {
-  image_id               = "ami-07c589821f2b353aa"
+  image_id               = var.ami
   instance_type          = var.instance_type
   vpc_security_group_ids = [aws_security_group.instance.id]
   user_data = base64encode(
@@ -103,6 +103,7 @@ resource "aws_launch_template" "example" {
       server_port = var.server_port
       db_address = data.terraform_remote_state.db.outputs.address
       db_port = data.terraform_remote_state.db.outputs.port
+      server_text = var.server_text
     })
   )
   # Autoscaling Groupがある起動設定を使用する場合に必要
@@ -171,4 +172,28 @@ resource "aws_security_group_rule" "allow_8080_inbound" {
   to_port     = var.server_port
   protocol    = local.tcp_protocol
   cidr_blocks = local.all_ips
+}
+
+resource "aws_autoscaling_schedule" "scale_out_during_business_hours" {
+    count = var.enable_autoscaling ? 1 : 0
+    
+    scheduled_action_name = "scale-out-during-business-hours"
+    min_size = 2
+    max_size = 10
+    desired_capacity = 10
+    recurrence = "0 9 * * *"
+
+    autoscaling_group_name = aws_autoscaling_group.example.name
+}
+
+resource "aws_autoscaling_schedule" "scale_in_at_night" {
+    count = var.enable_autoscaling ? 1 : 0
+
+    scheduled_action_name = "scale-in-at-night"
+    min_size= 2
+    max_size = 10
+    desired_capacity = 2
+    recurrence = "0 17 * * *"
+
+    autoscaling_group_name = aws_autoscaling_group.example.name
 }
