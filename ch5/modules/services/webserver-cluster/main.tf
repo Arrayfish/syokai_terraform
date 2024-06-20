@@ -129,32 +129,24 @@ data "aws_subnets" "main" {
 }
 
 resource "aws_autoscaling_group" "example" {
-
-  # 起動テンプレートの名前に明示的に依存させることで、
-  # 起動設定が置き換えられたときにASGも更新される
-  #  
-  name = "${var.cluster_name}-${aws_launch_template.example.latest_version}"
+  name = var.cluster_name
   launch_template {
     id      = aws_launch_template.example.id
-    version = "$Latest"
+    version = aws_launch_template.example.latest_version
   }
   vpc_zone_identifier = data.aws_subnets.main.ids
-
   target_group_arns = [aws_lb_target_group.asg.arn]
   health_check_type = "ELB"
 
   min_size = var.min_size
   max_size = var.max_size
 
-  # ASGデプロイが完了すると判断する前に、最低でもこの数の
-  # インスタンスがヘルスチェックをパスするのを待つ
-  min_elb_capacity = var.min_size
-
-  # このASGを置き換えるとき、置き換え先を先に作成してから古いものを削除する
-  lifecycle {
-    create_before_destroy = true
+  instance_refresh{
+    strategy = "Rolling"
+    preferences {
+      min_healthy_percentage = 50
+    }
   }
-
   tag {
     key                 = "Name"
     value               = "uekusa-${var.cluster_name}-asg-example"
