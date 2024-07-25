@@ -1,3 +1,9 @@
+variable "environment" {
+  description = "The environment to deploy to (e.g. dev, prod)"
+  type = string
+  
+}
+
 variable "server_port" {
   description = "The port the server will use for HTTP requests"
   type        = number
