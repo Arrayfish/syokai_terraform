@@ -76,6 +76,7 @@ module "asg" {
   subnet_ids = data.aws_subnets.main.ids
   target_group_arns = [aws_lb_target_group.asg.arn]
   health_check_type = "ELB"
+  vpc_id = data.terraform_remote_state.vpc.outputs.vpc_id
 
   custom_tags = var.custom_tags
 }
